@@ -52,15 +52,15 @@ ol {
 }
 
 .text-primary {
-  color: var(--primary);
+  color: var(--text-primary);
 }
 
 .text-secondary {
-  color: var(--secondary);
+  color: var(--text-secondary);
 }
 
 .bg-surface {
-  background-color: var(--surface);
+  background-color: var(--bg-card);
 }
 
 .u-mb-4 {

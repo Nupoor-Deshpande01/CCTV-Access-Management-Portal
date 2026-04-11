@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { db, storage } from '../firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, where, getDocs } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useAuth } from '../context/AuthContext';
 import { MapPin, Calendar, Clock, Search, CheckCircle, AlertCircle } from 'lucide-react';
+import toast from 'react-hot-toast';
 import MapSelector from './MapSelector';
 import Button from './common/Button';
 import Input from './common/Input';
@@ -17,10 +18,14 @@ const ComplaintForm = ({ onSuccess }) => {
         description: '',
         location: null,
         startTime: '',
-        endTime: ''
+        endTime: '',
+        targetEmail: ''
     });
 
     const [searchQuery, setSearchQuery] = useState('');
+    const [searchResults, setSearchResults] = useState([]);
+    const [isSearching, setIsSearching] = useState(false);
+    const [selectedSearchResult, setSelectedSearchResult] = useState(null);
     const [mapCenter, setMapCenter] = useState(null);
     const [completeness, setCompleteness] = useState(0);
 
@@ -35,6 +40,16 @@ const ComplaintForm = ({ onSuccess }) => {
         { id: 'c3', name: 'Park Cam', lat: 19.0700, lng: 72.8700 },
     ];
 
+    React.useEffect(() => {
+        const script = document.createElement('script');
+        script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+        script.async = true;
+        document.body.appendChild(script);
+        return () => {
+            document.body.removeChild(script);
+        };
+    }, []);
+
     // Calculate form completeness
     React.useEffect(() => {
         let score = 0;
@@ -46,22 +61,40 @@ const ComplaintForm = ({ onSuccess }) => {
         setCompleteness(Math.min(score, 100));
     }, [formData, files]);
 
-    const handleSearch = async () => {
-        if (!searchQuery) return;
-        try {
-            const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}`);
-            const data = await response.json();
-            if (data && data.length > 0) {
-                const { lat, lon } = data[0];
-                const newLoc = { lat: parseFloat(lat), lng: parseFloat(lon) };
-                setMapCenter([newLoc.lat, newLoc.lng]);
-                setFormData(prev => ({ ...prev, location: newLoc }));
+    React.useEffect(() => {
+        const delayDebounceFn = setTimeout(async () => {
+            if (searchQuery.trim().length > 2) {
+                setIsSearching(true);
+                try {
+                    const response = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(searchQuery)}&format=json&addressdetails=1&countrycodes=in&limit=5`);
+                    const data = await response.json();
+                    setSearchResults(data);
+                } catch (error) {
+                    console.error("Search error:", error);
+                }
+                setIsSearching(false);
             } else {
-                alert('Location not found');
+                setSearchResults([]);
             }
-        } catch (error) {
-            console.error("Search error:", error);
-            alert('Error searching location');
+        }, 300);
+
+        return () => clearTimeout(delayDebounceFn);
+    }, [searchQuery]);
+
+    const handleSelectResult = (result) => {
+        const newLoc = { lat: parseFloat(result.lat), lng: parseFloat(result.lon) };
+        setMapCenter([newLoc.lat, newLoc.lng]);
+        setSelectedSearchResult({ ...newLoc, displayName: result.display_name });
+        setSearchResults([]);
+        setSearchQuery(result.display_name);
+    };
+
+    const handleAcceptLocation = () => {
+        if (selectedSearchResult) {
+            setFormData(prev => ({ ...prev, location: selectedSearchResult }));
+            toast.success("Location accepted!");
+        } else {
+            toast.error("Please select a valid location from the search or map");
         }
     };
 
@@ -75,17 +108,17 @@ const ComplaintForm = ({ onSuccess }) => {
         e.preventDefault();
 
         if (!user) {
-            alert('You must be logged in to submit a complaint.');
+            toast.error('You must be logged in to submit a complaint.');
             return;
         }
 
         if (!formData.location) {
-            alert('Please select a location on the map');
+            toast.error('Please select a location on the map');
             return;
         }
 
         if (formData.startTime && formData.endTime && new Date(formData.startTime) >= new Date(formData.endTime)) {
-            alert('End time must be after start time');
+            toast.error('End time must be after start time');
             return;
         }
 
@@ -93,12 +126,22 @@ const ComplaintForm = ({ onSuccess }) => {
         setUploadProgress('Uploading data...');
 
         try {
+            let ownerId = null;
+            if (formData.targetEmail) {
+                const usersRef = collection(db, 'users');
+                const q = query(usersRef, where('email', '==', formData.targetEmail));
+                const querySnapshot = await getDocs(q);
+                if (!querySnapshot.empty) {
+                    ownerId = querySnapshot.docs[0].id;
+                }
+            }
             // Upload files first if any
             const attachmentUrls = [];
+            /* Firebase Storage disabled due to billing
             if (files.length > 0) {
                 setUploadProgress('Uploading files...');
                 for (const file of files) {
-                    const fileRef = ref(storage, `complaint_evidence/${user.uid}/${Date.now()}_${file.name}`);
+                    const fileRef = ref(storage, \`complaint_evidence/\${user.uid}/\${Date.now()}_\${file.name}\`);
                     await uploadBytes(fileRef, file);
                     const url = await getDownloadURL(fileRef);
                     attachmentUrls.push({
@@ -108,46 +151,90 @@ const ComplaintForm = ({ onSuccess }) => {
                     });
                 }
             }
+            */
 
-            // Save to Firestore
-            setUploadProgress('Saving complaint...');
-            await addDoc(collection(db, 'requests'), {
-                userId: user.uid,
-                userName: user.name || 'Anonymous',
-                type: formData.type,
-                description: formData.description,
-                location: {
-                    lat: formData.location.lat,
-                    lng: formData.location.lng
+            const requestedPrice = 500;
+            if (!window.Razorpay) {
+                toast.error("Razorpay SDK not loaded");
+                setLoading(false);
+                return;
+            }
+
+            const options = {
+                key: "rzp_test_dummykey",
+                amount: requestedPrice * 100,
+                currency: "INR",
+                name: "CCTV Access Portal",
+                description: "Footage Access Request Payment",
+                handler: async function (response) {
+                    try {
+                        setUploadProgress('Saving complaint...');
+                        await addDoc(collection(db, 'requests'), {
+                            userId: user.uid,
+                            userName: user.name || 'Anonymous',
+                            ownerId: ownerId,
+                            type: formData.type,
+                            description: formData.description,
+                            location: {
+                                lat: formData.location.lat,
+                                lng: formData.location.lng
+                            },
+                            timeRange: {
+                                start: formData.startTime,
+                                end: formData.endTime
+                            },
+                            extraDetails: extraDetails,
+                            attachments: attachmentUrls,
+                            targetEmail: formData.targetEmail,
+                            status: 'pending',
+                            timestamp: serverTimestamp(),
+                            createdAt: new Date().toISOString(),
+                            paymentId: response.razorpay_payment_id,
+                            paymentStatus: 'paid',
+                            amount: requestedPrice * 100
+                        });
+
+                        setFormData({ type: 'Theft', description: '', location: null, startTime: '', endTime: '', targetEmail: '' });
+                        setExtraDetails({});
+                        setFiles([]);
+                        setSearchQuery('');
+                        setSearchResults([]);
+                        setSelectedSearchResult(null);
+                        setCompleteness(0);
+                        setUploadProgress('');
+
+                        if (onSuccess) onSuccess();
+                        toast.success('Complaint registered and payment successful!');
+                    } catch (error) {
+                        console.error('Error saving complaint:', error);
+                        toast.error('Error: ' + error.message);
+                    } finally {
+                        setLoading(false);
+                    }
                 },
-                timeRange: {
-                    start: formData.startTime,
-                    end: formData.endTime
+                modal: {
+                    ondismiss: function() {
+                        setLoading(false);
+                    }
                 },
-                extraDetails: extraDetails,
-                attachments: attachmentUrls,
-                status: 'pending',
-                timestamp: serverTimestamp(),
-                createdAt: new Date().toISOString()
+                prefill: {
+                    name: user.name || "User",
+                    email: formData.targetEmail || "",
+                },
+                theme: { color: "#F37254" }
+            };
+
+            const rzp = new window.Razorpay(options);
+            rzp.on('payment.failed', function (response) {
+                toast.error("Payment failed. Request not submitted.");
+                setLoading(false);
             });
-
-            setFormData({ type: 'Theft', description: '', location: null, startTime: '', endTime: '' });
-            setExtraDetails({});
-            setFiles([]);
-            setUploadProgress('');
-            setSearchQuery('');
-            setCompleteness(0);
-            setExtraDetails({});
-            setFiles([]);
-            setUploadProgress('');
-
-            if (onSuccess) onSuccess();
-            alert('Complaint registered successfully!');
+            rzp.open();
         } catch (error) {
             console.error('Error submitting complaint:', error);
-            alert('Error: ' + error.message);
+            toast.error('Error: ' + error.message);
+            setLoading(false);
         }
-        setLoading(false);
     };
 
     return (
@@ -218,6 +305,17 @@ const ComplaintForm = ({ onSuccess }) => {
                     </div>
                 )}
 
+                <div className="u-mb-3">
+                    <Input
+                        label="Target Shop/Mall Email (Optional)"
+                        placeholder="e.g., security@phoenixmall.com"
+                        type="email"
+                        value={formData.targetEmail}
+                        onChange={(e) => setFormData({ ...formData, targetEmail: e.target.value })}
+                    />
+                    <small className="text-muted" style={{ display: 'block', marginTop: '4px' }}>Send this request directly to a specific shop/mall owner.</small>
+                </div>
+
                 <Input
                     label="Description (More Details)"
                     placeholder="Describe the incident..."
@@ -241,7 +339,7 @@ const ComplaintForm = ({ onSuccess }) => {
                 <div className="u-mb-4">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
                         <label className="input-label" style={{ margin: 0 }}>Incident Location</label>
-                        <span style={{ fontSize: '0.75rem', color: formData.location ? 'var(--success)' : 'var(--text-muted)' }}>
+                        <span style={{ fontSize: '0.75rem', color: formData.location ? 'var(--green)' : 'var(--text-muted)' }}>
                             {formData.location ? 'Location Selected' : 'Required'}
                         </span>
                     </div>
@@ -254,32 +352,40 @@ const ComplaintForm = ({ onSuccess }) => {
                                 placeholder="Search area, landmark..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleSearch())}
                                 style={{ paddingRight: '35px' }}
                             />
                             <Search
                                 size={16}
-                                style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', cursor: 'pointer' }}
-                                onClick={handleSearch}
+                                style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }}
                             />
+                            {isSearching && <span style={{ position: 'absolute', right: '35px', top: '50%', transform: 'translateY(-50%)', fontSize: '0.7rem', color: 'var(--text-muted)' }}>...</span>}
+                            {searchResults.length > 0 && (
+                                <ul style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 1000, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '4px', maxHeight: '200px', overflowY: 'auto', listStyle: 'none', padding: 0, margin: 0 }}>
+                                    {searchResults.map(res => (
+                                        <li key={res.place_id} onClick={() => handleSelectResult(res)} style={{ padding: '8px', borderBottom: '1px solid var(--border-color)', cursor: 'pointer', fontSize: '0.85rem' }}>
+                                            {res.display_name}
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
                         </div>
-                        <Button type="button" onClick={handleSearch} style={{ width: 'auto' }}>Find</Button>
+                        <Button type="button" onClick={handleAcceptLocation} style={{ width: 'auto' }}>Accept</Button>
                     </div>
 
                     <MapSelector
-                        onLocationSelect={(loc) => setFormData({ ...formData, location: loc })}
-                        initialPosition={formData.location}
+                        onLocationSelect={(loc) => setSelectedSearchResult({ ...loc, displayName: 'Selected on map' })}
+                        initialPosition={selectedSearchResult || formData.location}
                         center={mapCenter}
                         mockCameras={mockCameras}
                     />
                     {formData.location ? (
                         <p className="text-muted" style={{ fontSize: '0.8rem', marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <MapPin size={12} color="var(--primary)" />
+                            <MapPin size={12} color="var(--accent)" />
                             Selected: {formData.location.lat.toFixed(5)}, {formData.location.lng.toFixed(5)}
                             <span style={{ marginLeft: 'auto', color: 'var(--text-muted)', fontStyle: 'italic' }}>Drag pin to adjust</span>
                         </p>
                     ) : (
-                        <p className="text-muted" style={{ fontSize: '0.8rem', marginTop: '0.5rem', color: 'var(--warning)' }}>
+                        <p className="text-muted" style={{ fontSize: '0.8rem', marginTop: '0.5rem', color: 'var(--accent)' }}>
                             <AlertCircle size={12} style={{ display: 'inline', marginRight: '4px' }} />
                             Search or click on map to pin location
                         </p>
@@ -320,10 +426,10 @@ const ComplaintForm = ({ onSuccess }) => {
                 <div className="u-mb-4" style={{ background: 'var(--bg-secondary)', padding: '10px', borderRadius: '8px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontSize: '0.8rem' }}>
                         <span>Request Completeness</span>
-                        <span style={{ fontWeight: 'bold', color: completeness === 100 ? 'var(--success)' : 'var(--primary)' }}>{completeness}%</span>
+                        <span style={{ fontWeight: 'bold', color: completeness === 100 ? 'var(--green)' : 'var(--accent)' }}>{completeness}%</span>
                     </div>
                     <div style={{ height: '6px', width: '100%', background: '#e2e8f0', borderRadius: '3px', overflow: 'hidden' }}>
-                        <div style={{ height: '100%', width: `${completeness}%`, background: completeness === 100 ? 'var(--success)' : 'var(--primary)', transition: 'width 0.3s ease' }}></div>
+                        <div style={{ height: '100%', width: `${completeness}%`, background: completeness === 100 ? 'var(--green)' : 'var(--accent)', transition: 'width 0.3s ease' }}></div>
                     </div>
                     {completeness < 100 && <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>Add more details for faster processing.</p>}
                 </div>

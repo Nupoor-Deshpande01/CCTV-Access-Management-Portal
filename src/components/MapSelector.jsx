@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
+import MarkerClusterGroup from 'react-leaflet-cluster';
 import L from 'leaflet';
 
 // Fix for default marker icons in Leaflet with Webpack/Vite
@@ -106,23 +107,24 @@ const MapSelector = ({ onLocationSelect, initialPosition = null, center = null, 
                 <LocationClick />
                 <DraggableMarker setPosition={handleSetPosition} position={position} />
 
-                {mockCameras.map((cam) => (
-                    <Marker
-                        key={cam.id}
-                        position={[cam.lat, cam.lng]}
-                        icon={new L.Icon({
-                            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
-                            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-                            iconSize: [25, 41],
-                            iconAnchor: [12, 41],
-                            popupAnchor: [1, -34],
-                            shadowSize: [41, 41]
-                        })}
-                    >
-
-                        <Popup>{cam.name} (CCTV)</Popup>
-                    </Marker>
-                ))}
+                <MarkerClusterGroup>
+                    {mockCameras.map((cam) => (
+                        <Marker
+                            key={cam.id}
+                            position={[cam.lat, cam.lng]}
+                            icon={new L.Icon({
+                                iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+                                shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+                                iconSize: [25, 41],
+                                iconAnchor: [12, 41],
+                                popupAnchor: [1, -34],
+                                shadowSize: [41, 41]
+                            })}
+                        >
+                            <Popup>{cam.name} (CCTV)</Popup>
+                        </Marker>
+                    ))}
+                </MarkerClusterGroup>
             </MapContainer>
         </div>
     );

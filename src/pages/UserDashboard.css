@@ -29,7 +29,7 @@
     position: absolute;
     width: 32px;
     height: 32px;
-    background-color: var(--primary);
+    background-color: var(--accent);
     color: white;
     border-radius: 50%;
     display: flex;
@@ -42,11 +42,11 @@
 
 .map-pin:hover {
     transform: scale(1.1);
-    background-color: var(--primary-hover);
+    background-color: var(--accent-hover);
 }
 
 .map-pin.maintenance {
-    background-color: var(--warning);
+    background-color: var(--bg-elevated);
 }
 
 .request-sidebar {
@@ -60,7 +60,7 @@
     padding: var(--space-3);
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
-    background: var(--surface);
+    background: var(--bg-card);
     margin-bottom: var(--space-2);
 }
 
@@ -74,16 +74,16 @@
 }
 
 .status-pending {
-    background-color: var(--primary-light);
-    color: var(--primary);
+    background-color: var(--bg-elevated);
+    color: var(--accent);
 }
 
 .status-approved {
-    background-color: #DCFCE7;
-    color: var(--success);
+    background-color: #0f2d1f;
+    color: var(--green);
 }
 
 .status-rejected {
-    background-color: #FEE2E2;
-    color: var(--danger);
+    background-color: #2d1010;
+    color: var(--red);
 }

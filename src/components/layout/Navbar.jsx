@@ -1,9 +1,8 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import Button from '../common/Button';
+import { Camera } from 'lucide-react';
 import './Navbar.css';
-import { Camera, Shield } from 'lucide-react';
 
 const Navbar = () => {
     const { user, logout } = useAuth();
@@ -17,39 +16,52 @@ const Navbar = () => {
     return (
         <nav className="navbar">
             <div className="container nav-content">
+                {/* Left */}
                 <Link to="/" className="nav-brand">
-                    <Shield size={24} />
-                    <span>CCTV Access</span>
+                    <div className="nav-icon-box">
+                        <Camera size={20} color="var(--text-primary)" />
+                    </div>
+                    <div className="nav-brand-text">
+                        <span className="nav-title">CCTVAccess</span>
+                        <span className="nav-subtitle">SECURE · PRIVATE · TRUSTED</span>
+                    </div>
                 </Link>
 
-                <div className="nav-links">
+                {/* Center */}
+                {user && (
+                    <div className="nav-links">
+                        {user.role === 'citizen' && (
+                            <Link to="/dashboard" className="nav-link">Dashboard</Link>
+                        )}
+                        {user.role === 'owner' && (
+                            <Link to="/owner" className="nav-link">My Cameras</Link>
+                        )}
+                        {user.role === 'admin' && (
+                            <Link to="/admin" className="nav-link">Admin Console</Link>
+                        )}
+                    </div>
+                )}
+
+                {/* Right */}
+                <div className="nav-actions">
                     {!user ? (
                         <>
-                            <Link to="/login" className="nav-link">Login</Link>
+                            <Link to="/login" className="nav-link-ghost">Sign In</Link>
                             <Link to="/register">
-                                <Button>Get Started</Button>
+                                <button className="nav-btn-primary">Get Started</button>
                             </Link>
                         </>
                     ) : (
                         <>
-                            <span className="nav-text" style={{ marginRight: '1rem' }}>
-                                Hello, {user.name || user.email} ({user.role})
+                            <span className="nav-user-text">
+                                Hello, {user.name || user.email}
                             </span>
-                            {user.role === 'citizen' && (
-                                <Link to="/dashboard" className="nav-link">Dashboard</Link>
-                            )}
-                            {user.role === 'owner' && (
-                                <Link to="/owner" className="nav-link">My Cameras</Link>
-                            )}
-                            {user.role === 'admin' && (
-                                <Link to="/admin" className="nav-link">Admin Console</Link>
-                            )}
-                            <Button variant="outline" onClick={handleLogout}>Logout</Button>
+                            <button className="nav-btn-ghost" onClick={handleLogout}>Logout</button>
                         </>
                     )}
                 </div>
             </div>
-        </nav >
+        </nav>
     );
 };
 

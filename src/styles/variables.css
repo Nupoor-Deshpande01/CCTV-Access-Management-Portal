@@ -1,25 +1,17 @@
 :root {
-  /* Colors */
-  --primary: #2563EB; /* Royal Blue */
-  --primary-hover: #1D4ED8;
-  --primary-light: #EFF6FF;
-  
-  --secondary: #64748B; /* Slate */
-  --secondary-hover: #475569;
-  
-  --success: #10B981;
-  --warning: #F59E0B;
-  --danger: #EF4444;
-  
-  --background: #F8FAFC; /* Slate 50 */
-  --surface: #FFFFFF;
-  --surface-hover: #F1F5F9;
-  
-  --text-main: #0F172A; /* Slate 900 */
-  --text-muted: #64748B;
-  --text-inverse: #FFFFFF;
-  
-  --border: #E2E8F0; /* Slate 200 */
+  /* Colors - Dark Navy Lovable Theme */
+  --bg-base: #0f1623;
+  --bg-card: #131d2e;
+  --bg-elevated: #1e2a3a;
+  --accent: #F5A623;
+  --accent-hover: #e09620;
+  --text-primary: #ffffff;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --border: rgba(255,255,255,0.08);
+  --border-accent: rgba(245,166,35,0.25);
+  --green: #1D9E75;
+  --red: #E24B4A;
   
   /* Spacing */
   --space-1: 0.25rem;
@@ -51,8 +43,8 @@
 
 body {
   font-family: var(--font-sans);
-  background-color: var(--background);
-  color: var(--text-main);
+  background: var(--bg-base);
+  color: var(--text-primary);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
 }

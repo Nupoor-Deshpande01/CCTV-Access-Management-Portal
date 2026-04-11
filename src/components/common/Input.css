@@ -18,12 +18,12 @@
     border-radius: var(--radius-md);
     font-size: 1rem;
     transition: border-color 0.2s;
-    background-color: var(--surface);
+    background-color: var(--bg-elevated);
 }
 
 .input-field:focus {
     outline: none;
-    border-color: var(--primary);
+    border-color: var(--accent);
     box-shadow: 0 0 0 2px var(--primary-light);
 }
 

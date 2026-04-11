@@ -1,7 +1,7 @@
 .navbar {
-    background-color: var(--surface);
+    background-color: var(--bg-base);
     border-bottom: 1px solid var(--border);
-    padding: var(--space-4) 0;
+    padding: 12px 0;
     position: sticky;
     top: 0;
     z-index: 100;
@@ -14,30 +14,108 @@
 }
 
 .nav-brand {
-    font-size: 1.25rem;
-    font-weight: var(--weight-bold);
-    color: var(--primary);
     display: flex;
     align-items: center;
-    gap: var(--space-2);
+    gap: 12px;
+    text-decoration: none;
+}
+
+.nav-icon-box {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.nav-brand-text {
+    display: flex;
+    flex-direction: column;
+}
+
+.nav-title {
+    font-size: 18px;
+    font-weight: bold;
+    color: var(--text-primary);
+    line-height: 1;
+}
+
+.nav-subtitle {
+    color: var(--accent);
+    font-size: 9px;
+    font-weight: bold;
+    letter-spacing: 0.05em;
+    margin-top: 2px;
 }
 
 .nav-links {
     display: flex;
-    gap: var(--space-4);
+    gap: 24px;
     align-items: center;
 }
 
 .nav-link {
-    font-weight: var(--weight-medium);
+    font-weight: 500;
     color: var(--text-secondary);
     transition: color 0.15s;
+    text-decoration: none;
 }
 
 .nav-link:hover {
-    color: var(--primary);
+    color: var(--text-primary);
 }
 
-.nav-link.active {
-    color: var(--primary);
+.nav-actions {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+}
+
+.nav-link-ghost {
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.15s;
+}
+
+.nav-link-ghost:hover {
+    color: var(--text-primary);
+}
+
+.nav-btn-primary {
+    background-color: var(--accent);
+    color: #0f1623;
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-weight: bold;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.15s;
+}
+
+.nav-btn-primary:hover {
+    background-color: var(--accent-hover);
+}
+
+.nav-user-text {
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+.nav-btn-ghost {
+    background: transparent;
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.nav-btn-ghost:hover {
+    color: var(--text-primary);
+    border-color: var(--text-secondary);
 }

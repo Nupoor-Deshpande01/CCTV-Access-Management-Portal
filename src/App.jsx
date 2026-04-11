@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { DataProvider } from './context/DataContext';
+import { Toaster } from 'react-hot-toast';
 
 import Landing from './pages/Landing';
 import Login from './pages/Login';
@@ -58,6 +59,7 @@ function App() {
               }
             />
           </Routes>
+          <Toaster position="bottom-right" />
         </DataProvider>
       </AuthProvider>
     </Router>
