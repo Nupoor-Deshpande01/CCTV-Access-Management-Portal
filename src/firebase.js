@@ -15,10 +15,18 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
-export const db = getFirestore(app);
-export const storage = getStorage(app);
-export const googleProvider = new GoogleAuthProvider();
+let app, auth, db, storage, googleProvider;
+export const isFirebaseConfigured = Boolean(firebaseConfig.apiKey);
 
+if (isFirebaseConfigured) {
+    app = initializeApp(firebaseConfig);
+    auth = getAuth(app);
+    db = getFirestore(app);
+    storage = getStorage(app);
+    googleProvider = new GoogleAuthProvider();
+} else {
+    console.error("Firebase is not configured. Missing environment variables.");
+}
+
+export { auth, db, storage, googleProvider };
 export default app;
