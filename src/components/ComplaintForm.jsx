@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { db, storage } from '../firebase';
+import { db, storage, auth } from '../firebase';
+import { httpsCallable } from 'firebase/functions';
 import { collection, addDoc, serverTimestamp, query, where, getDocs } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useAuth } from '../context/AuthContext';
@@ -107,7 +108,7 @@ const ComplaintForm = ({ onSuccess }) => {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        if (!user) {
+        if (!auth.currentUser) {
             toast.error('You must be logged in to submit a complaint.');
             return;
         }
@@ -122,117 +123,36 @@ const ComplaintForm = ({ onSuccess }) => {
             return;
         }
 
-        setLoading(true);
-        setUploadProgress('Uploading data...');
-
         try {
-            let ownerId = null;
-            if (formData.targetEmail) {
-                const usersRef = collection(db, 'users');
-                const q = query(usersRef, where('email', '==', formData.targetEmail));
-                const querySnapshot = await getDocs(q);
-                if (!querySnapshot.empty) {
-                    ownerId = querySnapshot.docs[0].id;
-                }
-            }
-            // Upload files first if any
-            const attachmentUrls = [];
-            /* Firebase Storage disabled due to billing
-            if (files.length > 0) {
-                setUploadProgress('Uploading files...');
-                for (const file of files) {
-                    const fileRef = ref(storage, \`complaint_evidence/\${user.uid}/\${Date.now()}_\${file.name}\`);
-                    await uploadBytes(fileRef, file);
-                    const url = await getDownloadURL(fileRef);
-                    attachmentUrls.push({
-                        name: file.name,
-                        url: url,
-                        type: file.type
-                    });
-                }
-            }
-            */
+            setLoading(true);
 
-            const requestedPrice = 500;
-            if (!window.Razorpay) {
-                toast.error("Razorpay SDK not loaded");
-                setLoading(false);
-                return;
-            }
-
-            const options = {
-                key: "rzp_test_dummykey",
-                amount: requestedPrice * 100,
-                currency: "INR",
-                name: "CCTV Access Portal",
-                description: "Footage Access Request Payment",
-                handler: async function (response) {
-                    try {
-                        setUploadProgress('Saving complaint...');
-                        await addDoc(collection(db, 'requests'), {
-                            userId: user.uid,
-                            userName: user.name || 'Anonymous',
-                            ownerId: ownerId,
-                            type: formData.type,
-                            description: formData.description,
-                            location: {
-                                lat: formData.location.lat,
-                                lng: formData.location.lng
-                            },
-                            timeRange: {
-                                start: formData.startTime,
-                                end: formData.endTime
-                            },
-                            extraDetails: extraDetails,
-                            attachments: attachmentUrls,
-                            targetEmail: formData.targetEmail,
-                            status: 'pending',
-                            timestamp: serverTimestamp(),
-                            createdAt: new Date().toISOString(),
-                            paymentId: response.razorpay_payment_id,
-                            paymentStatus: 'paid',
-                            amount: requestedPrice * 100
-                        });
-
-                        setFormData({ type: 'Theft', description: '', location: null, startTime: '', endTime: '', targetEmail: '' });
-                        setExtraDetails({});
-                        setFiles([]);
-                        setSearchQuery('');
-                        setSearchResults([]);
-                        setSelectedSearchResult(null);
-                        setCompleteness(0);
-                        setUploadProgress('');
-
-                        if (onSuccess) onSuccess();
-                        toast.success('Complaint registered and payment successful!');
-                    } catch (error) {
-                        console.error('Error saving complaint:', error);
-                        toast.error('Error: ' + error.message);
-                    } finally {
-                        setLoading(false);
-                    }
-                },
-                modal: {
-                    ondismiss: function() {
-                        setLoading(false);
-                    }
-                },
-                prefill: {
-                    name: user.name || "User",
-                    email: formData.targetEmail || "",
-                },
-                theme: { color: "#F37254" }
-            };
-
-            const rzp = new window.Razorpay(options);
-            rzp.on('payment.failed', function (response) {
-                toast.error("Payment failed. Request not submitted.");
-                setLoading(false);
+            // Save complaint to Firestore bypassing payment
+            await addDoc(collection(db, "requests"), {
+              type: formData.type,
+              description: formData.description,
+              location: formData.location,
+              incidentDate: formData.startTime || null,
+              citizenId: auth.currentUser.uid,
+              citizenName: auth.currentUser.displayName || "Citizen",
+              citizenEmail: auth.currentUser.email,
+              status: "pending",
+              paymentStatus: "skipped", // Or remove entirely
+              createdAt: serverTimestamp(),
+              footageUrl: null,
+              approvedAt: null,
+              rejectionReason: null,
             });
-            rzp.open();
-        } catch (error) {
-            console.error('Error submitting complaint:', error);
-            toast.error('Error: ' + error.message);
+            
+            toast.success("Complaint registered successfully!");
+            
+            // Reset form
+            setFormData({ type: 'Theft', description: '', location: null, startTime: '', endTime: '', targetEmail: '' });
+            if (onSuccess) onSuccess();
+
+        } catch (err) {
+            console.error("Full error:", err);
+            toast.error(`Error: ${err.message}`);
+        } finally {
             setLoading(false);
         }
     };

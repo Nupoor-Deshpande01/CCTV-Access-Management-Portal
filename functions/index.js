@@ -1,64 +1,56 @@
-const functions = require('firebase-functions');
-const admin = require('firebase-admin');
-const Razorpay = require('razorpay');
+const functions = require("firebase-functions");
+const admin = require("firebase-admin");
+const Razorpay = require("razorpay");
+const cors = require("cors")({ origin: true });
 
 admin.initializeApp();
 
-const instance = new Razorpay({
-    key_id: 'rzp_test_dummykey',
-    key_secret: 'rzp_test_dummysecret',
-});
+exports.createRazorpayOrder = functions.https.onCall(async (data, context) => {
+  // Auth check
+  if (!context.auth) {
+    throw new functions.https.HttpsError(
+      "unauthenticated",
+      "You must be logged in to make a payment."
+    );
+  }
 
-exports.transferPayment = functions.firestore
-    .document('requests/{requestId}')
-    .onUpdate(async (change, context) => {
-        const newValue = change.after.data();
-        const previousValue = change.before.data();
+  const amount = data.amount;
+  if (!amount || typeof amount !== "number" || amount < 100) {
+    throw new functions.https.HttpsError(
+      "invalid-argument",
+      "Amount must be a number in paise (min 100)."
+    );
+  }
 
-        if (newValue.status === 'approved' && previousValue.status !== 'approved') {
-            const amount = newValue.amount || 50000; // Default 500 INR in paise
+  try {
+    // For LOCAL TESTING use test keys directly here
+    // For PRODUCTION use functions.config().razorpay.key_id
+    const keyId = process.env.RAZORPAY_KEY_ID || "rzp_test_YOUR_KEY_HERE";
+    const keySecret = process.env.RAZORPAY_KEY_SECRET || "YOUR_SECRET_HERE";
 
-            // For now, we mock transferring 80% to a standard account
-            const ownerId = newValue.ownerId;
-            let targetAccountId = 'acc_DummyOwnerId123'; // Fallback
-            
-            try {
-                // Fetch user to get real account if it exists
-                if (ownerId) {
-                    const userDoc = await admin.firestore().collection('users').doc(ownerId).get();
-                    if (userDoc.exists && userDoc.data().razorpayAccountId) {
-                        targetAccountId = userDoc.data().razorpayAccountId;
-                    }
-                }
-
-                await instance.transfers.create({
-                    account: targetAccountId,
-                    amount: Math.floor(amount * 0.8),
-                    currency: "INR"
-                });
-                console.log(`Successfully transferred ${amount * 0.8} paise to ${targetAccountId}`);
-            } catch (error) {
-                console.error("Error creating transfer", error);
-            }
-        }
-        return null;
+    const razorpay = new Razorpay({
+      key_id: keyId,
+      key_secret: keySecret,
     });
 
-exports.generateSignedUrl = functions.https.onCall(async (data, context) => {
-    const { filePath, requestId } = data;
-    
-    const bucket = admin.storage().bucket();
-    const expiresAt = Date.now() + 48 * 60 * 60 * 1000;
-    
-    const [url] = await bucket.file(filePath).getSignedUrl({
-        action: 'read',
-        expires: expiresAt
+    const order = await razorpay.orders.create({
+      amount: amount,
+      currency: "INR",
+      receipt: `rcpt_${Date.now()}`,
+      payment_capture: 1,
     });
 
-    await admin.firestore().collection('requests').doc(requestId).update({
-        signedUrl: url,
-        expiresAt: expiresAt
-    });
+    return {
+      orderId: order.id,
+      amount: order.amount,
+      currency: order.currency,
+    };
 
-    return { signedUrl: url, expiresAt: expiresAt };
+  } catch (err) {
+    console.error("Razorpay order creation error:", err);
+    throw new functions.https.HttpsError(
+      "internal",
+      `Razorpay failed: ${err.message}`
+    );
+  }
 });

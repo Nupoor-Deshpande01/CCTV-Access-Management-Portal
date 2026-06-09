@@ -66,7 +66,14 @@ export const AuthProvider = ({ children }) => {
 
     const login = async (email, password) => {
         try {
-            await signInWithEmailAndPassword(auth, email, password);
+            const userCredential = await signInWithEmailAndPassword(auth, email, password);
+            const userDoc = await getDoc(doc(db, "users", userCredential.user.uid));
+            if (userDoc.exists()) {
+                const userData = userDoc.data();
+                setUser({ ...userCredential.user, ...userData });
+                return userData;
+            }
+            return null;
         } catch (error) {
             throw error;
         }
@@ -76,20 +83,25 @@ export const AuthProvider = ({ children }) => {
         try {
             const provider = new GoogleAuthProvider();
             const result = await signInWithPopup(auth, provider);
-            const user = result.user;
+            const firebaseUser = result.user;
 
             // Check if user exists
-            const userDoc = await getDoc(doc(db, "users", user.uid));
+            const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
+            let userData;
             if (!userDoc.exists()) {
-                await setDoc(doc(db, "users", user.uid), {
-                    uid: user.uid,
-                    name: user.displayName,
-                    email: user.email,
+                userData = {
+                    uid: firebaseUser.uid,
+                    name: firebaseUser.displayName,
+                    email: firebaseUser.email,
                     role: 'citizen',
                     createdAt: new Date()
-                });
+                };
+                await setDoc(doc(db, "users", firebaseUser.uid), userData);
+            } else {
+                userData = userDoc.data();
             }
-            return user;
+            setUser({ ...firebaseUser, ...userData });
+            return userData;
         } catch (error) {
             console.error("Google sign in error", error);
             throw error;

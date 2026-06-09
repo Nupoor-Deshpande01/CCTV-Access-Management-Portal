@@ -1,7 +1,7 @@
-// Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider } from "firebase/auth";
+import { getFunctions } from "firebase/functions";
 import { getFirestore } from "firebase/firestore";
+import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import { getStorage } from "firebase/storage";
 
 // Your web app's Firebase configuration
@@ -14,19 +14,14 @@ const firebaseConfig = {
     appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
-// Initialize Firebase
-let app, auth, db, storage, googleProvider;
-export const isFirebaseConfigured = Boolean(firebaseConfig.apiKey);
+const app = initializeApp(firebaseConfig);
 
-if (isFirebaseConfigured) {
-    app = initializeApp(firebaseConfig);
-    auth = getAuth(app);
-    db = getFirestore(app);
-    storage = getStorage(app);
-    googleProvider = new GoogleAuthProvider();
-} else {
-    console.error("Firebase is not configured. Missing environment variables.");
-}
+export const auth = getAuth(app);
+export const db = getFirestore(app);
+export const functions = getFunctions(app, "us-central1");
+export const storage = getStorage(app);
+export const googleProvider = new GoogleAuthProvider();
 
-export { auth, db, storage, googleProvider };
+
+
 export default app;

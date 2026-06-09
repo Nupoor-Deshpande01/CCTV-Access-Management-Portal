@@ -11,27 +11,101 @@ const Landing = () => {
             
             {/* Hero Section */}
             <section className="hero-section">
-                <div className="container hero-content">
-                    <div className="trust-badge">
-                        <Shield size={14} color="var(--accent)" />
-                        <span>VERIFIED CCTV NETWORK</span>
-                    </div>
-                    <h1 className="hero-title">
-                        Ethical CCTV Access for <span style={{ color: 'var(--accent)' }}>Safer Communities</span>
-                    </h1>
-                    <p className="hero-subtitle">
-                        A privacy-first platform that empowers citizens to request footage for valid reasons, while giving owners full control and incentives.
-                    </p>
-                    <div className="hero-actions">
-                        <Link to="/register">
-                            <button className="btn-primary">Get Started</button>
-                        </Link>
-                        <Link to="/login">
-                            <button className="btn-outline">Log In</button>
-                        </Link>
+                <div className="container hero-grid-wrapper">
+                    {/* Left Column: Copy & Call to Action */}
+                    <div className="hero-left">
+                        <div className="trust-badge">
+                            <Shield size={13} color="var(--accent)" strokeWidth={2.5} />
+                            <span>CIVIC SAFETY NETWORK</span>
+                        </div>
+                        <h1 className="hero-title">
+                            Secure, Ethical CCTV Access for <span>Safer Communities</span>
+                        </h1>
+                        <p className="hero-subtitle">
+                            A privacy-first civic platform that empowers citizens to request surveillance footage for legitimate safety concerns, while giving camera owners full transparency, privacy control, and incentives.
+                        </p>
+                        <div className="hero-actions">
+                            <Link to="/register">
+                                <button className="btn-primary">Get Started</button>
+                            </Link>
+                            <Link to="/login">
+                                <button className="btn-outline">Log In</button>
+                            </Link>
+                        </div>
                     </div>
 
-                    {/* Stats Bar */}
+                    {/* Right Column: Platform Vector Mockup */}
+                    <div className="hero-right">
+                        <div className="hero-mockup-container">
+                            <div className="hero-mockup-window">
+                                <div className="mockup-window-header">
+                                    <div className="mockup-window-dots">
+                                        <div className="mockup-window-dot red"></div>
+                                        <div className="mockup-window-dot yellow"></div>
+                                        <div className="mockup-window-dot green"></div>
+                                    </div>
+                                    <div className="mockup-window-address">
+                                        portal.cctvaccess.gov.in
+                                    </div>
+                                </div>
+                                <div className="mockup-window-body">
+                                    {/* Left: Map Preview */}
+                                    <div className="mockup-map-container">
+                                        <div className="mockup-map-grid"></div>
+                                        <div className="mockup-map-streets">
+                                            <div className="mockup-map-street s1"></div>
+                                            <div className="mockup-map-street s2"></div>
+                                            <div className="mockup-map-street s3"></div>
+                                            <div className="mockup-map-street s4"></div>
+                                        </div>
+                                        {/* Camera Pins */}
+                                        <div className="mockup-map-pin p1">
+                                            <Camera size={10} strokeWidth={2.5} />
+                                        </div>
+                                        <div className="mockup-map-pin p2">
+                                            <Camera size={10} strokeWidth={2.5} />
+                                        </div>
+                                        <div className="mockup-map-pin p3">
+                                            <Camera size={10} strokeWidth={2.5} />
+                                        </div>
+                                    </div>
+
+                                    {/* Right: Request Tracker */}
+                                    <div className="mockup-status-panel">
+                                        <div className="mockup-card-item">
+                                            <div className="mockup-card-title">Active Request</div>
+                                            <div className="mockup-card-desc">
+                                                <span>#REQ-4028</span>
+                                                <span className="mockup-badge success">Approved</span>
+                                            </div>
+                                            <div className="mockup-card-meta">Sector-4 Crossroad</div>
+                                        </div>
+
+                                        <div className="mockup-card-item" style={{ backgroundColor: 'transparent', border: 'none', padding: '0 4px' }}>
+                                            <div className="mockup-steps">
+                                                <div className="mockup-step-node">
+                                                    <div className="mockup-step-indicator completed"></div>
+                                                    <span className="mockup-step-text completed">Request Lodged</span>
+                                                </div>
+                                                <div className="mockup-step-node">
+                                                    <div className="mockup-step-indicator completed"></div>
+                                                    <span className="mockup-step-text completed">Owner Approved</span>
+                                                </div>
+                                                <div className="mockup-step-node">
+                                                    <div className="mockup-step-indicator active"></div>
+                                                    <span className="mockup-step-text active">Footage Ready</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Stats Bar */}
+                <div className="container hero-stats-wrapper">
                     <div className="stats-bar">
                         <div className="stat-cell">
                             <Users size={20} color="var(--accent)" />
