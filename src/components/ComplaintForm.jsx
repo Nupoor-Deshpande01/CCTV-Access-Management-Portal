@@ -65,11 +65,49 @@ const ComplaintForm = ({ onSuccess }) => {
     React.useEffect(() => {
         const delayDebounceFn = setTimeout(async () => {
             if (searchQuery.trim().length > 2) {
+                if (selectedSearchResult && searchQuery === selectedSearchResult.displayName) {
+                    return;
+                }
                 setIsSearching(true);
+                
+                // Try Google Places Autocomplete Service first
+                if (window.google && window.google.maps && window.google.maps.places) {
+                    try {
+                        const service = new window.google.maps.places.AutocompleteService();
+                        service.getPlacePredictions({
+                            input: searchQuery,
+                            componentRestrictions: { country: 'in' }
+                        }, (predictions, status) => {
+                            if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
+                                const results = predictions.map(pred => ({
+                                    place_id: pred.place_id,
+                                    display_name: pred.description,
+                                    isGoogle: true
+                                }));
+                                setSearchResults(results);
+                            } else {
+                                setSearchResults([]);
+                            }
+                            setIsSearching(false);
+                        });
+                        return;
+                    } catch (err) {
+                        console.warn("Google Places Autocomplete failed, falling back to Nominatim", err);
+                    }
+                }
+
+                // Fallback to Nominatim
                 try {
                     const response = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(searchQuery)}&format=json&addressdetails=1&countrycodes=in&limit=5`);
                     const data = await response.json();
-                    setSearchResults(data);
+                    const results = data.map(res => ({
+                        place_id: res.place_id,
+                        display_name: res.display_name,
+                        lat: parseFloat(res.lat),
+                        lng: parseFloat(res.lon),
+                        isGoogle: false
+                    }));
+                    setSearchResults(results);
                 } catch (error) {
                     console.error("Search error:", error);
                 }
@@ -80,14 +118,34 @@ const ComplaintForm = ({ onSuccess }) => {
         }, 300);
 
         return () => clearTimeout(delayDebounceFn);
-    }, [searchQuery]);
+    }, [searchQuery, selectedSearchResult]);
 
     const handleSelectResult = (result) => {
-        const newLoc = { lat: parseFloat(result.lat), lng: parseFloat(result.lon) };
-        setMapCenter([newLoc.lat, newLoc.lng]);
-        setSelectedSearchResult({ ...newLoc, displayName: result.display_name });
-        setSearchResults([]);
-        setSearchQuery(result.display_name);
+        if (result.isGoogle) {
+            if (window.google && window.google.maps) {
+                const geocoder = new window.google.maps.Geocoder();
+                geocoder.geocode({ placeId: result.place_id }, (results, status) => {
+                    if (status === 'OK' && results[0]) {
+                        const newLoc = {
+                            lat: results[0].geometry.location.lat(),
+                            lng: results[0].geometry.location.lng()
+                        };
+                        setMapCenter(newLoc);
+                        setSelectedSearchResult({ ...newLoc, displayName: result.display_name });
+                        setSearchResults([]);
+                        setSearchQuery(result.display_name);
+                    } else {
+                        toast.error("Failed to retrieve coordinates for this place.");
+                    }
+                });
+            }
+        } else {
+            const newLoc = { lat: result.lat, lng: result.lng };
+            setMapCenter([newLoc.lat, newLoc.lng]);
+            setSelectedSearchResult({ ...newLoc, displayName: result.display_name });
+            setSearchResults([]);
+            setSearchQuery(result.display_name);
+        }
     };
 
     const handleAcceptLocation = () => {
@@ -265,14 +323,14 @@ const ComplaintForm = ({ onSuccess }) => {
                     </div>
 
                     <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
-                        <div style={{ position: 'relative', flex: 1 }}>
+                        <div className="places-search-container" style={{ flex: 1 }}>
                             <input
                                 type="text"
                                 className="input-field"
                                 placeholder="Search area, landmark..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                style={{ paddingRight: '35px' }}
+                                style={{ paddingRight: '35px', width: '100%' }}
                             />
                             <Search
                                 size={16}
@@ -280,9 +338,9 @@ const ComplaintForm = ({ onSuccess }) => {
                             />
                             {isSearching && <span style={{ position: 'absolute', right: '35px', top: '50%', transform: 'translateY(-50%)', fontSize: '0.7rem', color: 'var(--text-muted)' }}>...</span>}
                             {searchResults.length > 0 && (
-                                <ul style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 1000, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '4px', maxHeight: '200px', overflowY: 'auto', listStyle: 'none', padding: 0, margin: 0 }}>
+                                <ul className="places-search-dropdown">
                                     {searchResults.map(res => (
-                                        <li key={res.place_id} onClick={() => handleSelectResult(res)} style={{ padding: '8px', borderBottom: '1px solid var(--border-color)', cursor: 'pointer', fontSize: '0.85rem' }}>
+                                        <li key={res.place_id} onClick={() => handleSelectResult(res)}>
                                             {res.display_name}
                                         </li>
                                     ))}
