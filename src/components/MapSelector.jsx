@@ -1,131 +1,264 @@
-import React, { useState } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
-import MarkerClusterGroup from 'react-leaflet-cluster';
-import L from 'leaflet';
+import React, { useEffect, useRef, useState } from 'react';
 
-// Fix for default marker icons in Leaflet with Webpack/Vite
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-});
+// Custom hook to load Google Maps script
+const useGoogleMaps = (apiKey) => {
+    const [loaded, setLoaded] = useState(false);
+    const [error, setError] = useState(null);
 
-// Component to programmatically update map center
-const MapUpdater = ({ center }) => {
-    const map = useMapEvents({});
-    React.useEffect(() => {
-        if (center) {
-            map.flyTo(center, map.getZoom());
+    useEffect(() => {
+        if (window.google && window.google.maps) {
+            setLoaded(true);
+            return;
         }
-    }, [center, map]);
-    return null;
+
+        // Check if script already exists
+        const existingScript = document.getElementById('google-maps-script');
+        if (existingScript) {
+            const handleLoad = () => setLoaded(true);
+            existingScript.addEventListener('load', handleLoad);
+            return () => {
+                existingScript.removeEventListener('load', handleLoad);
+            };
+        }
+
+        const script = document.createElement('script');
+        script.id = 'google-maps-script';
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey || ''}`;
+        script.async = true;
+        script.defer = true;
+
+        const handleScriptLoad = () => {
+            setLoaded(true);
+        };
+
+        const handleScriptError = (err) => {
+            setError(err);
+        };
+
+        script.addEventListener('load', handleScriptLoad);
+        script.addEventListener('error', handleScriptError);
+
+        document.head.appendChild(script);
+
+        return () => {
+            script.removeEventListener('load', handleScriptLoad);
+            script.removeEventListener('error', handleScriptError);
+        };
+    }, [apiKey]);
+
+    return { loaded, error };
 };
 
-const DraggableMarker = ({ position, setPosition }) => {
-    const [draggable, setDraggable] = useState(true);
-    const markerRef = React.useRef(null);
-
-    const eventHandlers = React.useMemo(
-        () => ({
-            dragend() {
-                const marker = markerRef.current;
-                if (marker != null) {
-                    setPosition(marker.getLatLng());
-                }
-            },
-        }),
-        [setPosition],
-    );
-
-    // Update internal marker reference if position changes externally
-    React.useEffect(() => {
-        if (markerRef.current && position) {
-            markerRef.current.setLatLng(position);
-        }
-    }, [position]);
-
-
-    return position === null ? null : (
-        <Marker
-            draggable={draggable}
-            eventHandlers={eventHandlers}
-            position={position}
-            ref={markerRef}
-        >
-            <Popup>
-                <span onClick={() => setDraggable(!draggable)}>
-                    {draggable ? 'Marker is draggable' : 'Click to enable drag'}
-                </span>
-            </Popup>
-        </Marker>
-    );
-};
+const darkMapStyle = [
+    { "elementType": "geometry", "stylers": [{ "color": "#0f172a" }] },
+    { "elementType": "labels.text.stroke", "stylers": [{ "color": "#0f172a" }, { "weight": 2 }] },
+    { "elementType": "labels.text.fill", "stylers": [{ "color": "#475569" }] },
+    { "featureType": "administrative", "elementType": "geometry", "stylers": [{ "visibility": "off" }] },
+    { "featureType": "administrative.country", "elementType": "geometry.stroke", "stylers": [{ "color": "#1e293b" }, { "visibility": "on" }] },
+    { "featureType": "administrative.land_parcel", "stylers": [{ "visibility": "off" }] },
+    { "featureType": "administrative.neighborhood", "stylers": [{ "visibility": "off" }] },
+    { "featureType": "poi", "stylers": [{ "visibility": "off" }] },
+    { "featureType": "road", "elementType": "geometry", "stylers": [{ "color": "#1e293b" }] },
+    { "featureType": "road", "elementType": "labels.icon", "stylers": [{ "visibility": "off" }] },
+    { "featureType": "road.arterial", "elementType": "geometry", "stylers": [{ "color": "#334155" }] },
+    { "featureType": "road.highway", "elementType": "geometry", "stylers": [{ "color": "#475569" }] },
+    { "featureType": "transit", "stylers": [{ "visibility": "off" }] },
+    { "featureType": "water", "elementType": "geometry", "stylers": [{ "color": "#020617" }] },
+    { "featureType": "water", "elementType": "labels.text.fill", "stylers": [{ "color": "#334155" }] }
+];
 
 const MapSelector = ({ onLocationSelect, initialPosition = null, center = null, mockCameras = [] }) => {
-    // Default center Mumbai
-    const defaultCenter = [19.0760, 72.8777];
-    const mapCenter = center || (initialPosition ? [initialPosition.lat, initialPosition.lng] : defaultCenter);
-    const [position, setPosition] = useState(initialPosition);
+    const mapRef = useRef(null);
+    const googleMapInstanceRef = useRef(null);
+    const markerInstanceRef = useRef(null);
+    const cameraMarkersRef = useRef([]);
+    const [selectedPos, setSelectedPos] = useState(initialPosition);
 
-    React.useEffect(() => {
+    const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
+    const { loaded, error } = useGoogleMaps(apiKey);
+
+    // Default center Mumbai
+    const defaultCenter = { lat: 19.0760, lng: 72.8777 };
+
+    const getInitialCenter = () => {
+        if (center && typeof center[0] === 'number') {
+            return { lat: center[0], lng: center[1] };
+        } else if (center && typeof center.lat === 'number') {
+            return center;
+        }
+
+        if (initialPosition && typeof initialPosition.lat === 'number') {
+            return initialPosition;
+        } else if (initialPosition && typeof initialPosition[0] === 'number') {
+            return { lat: initialPosition[0], lng: initialPosition[1] };
+        }
+
+        return defaultCenter;
+    };
+
+    // Initialize Map
+    useEffect(() => {
+        if (!loaded || !mapRef.current) return;
+
+        const initialCenter = getInitialCenter();
+        const map = new window.google.maps.Map(mapRef.current, {
+            center: initialCenter,
+            zoom: 13,
+            styles: darkMapStyle,
+            disableDefaultUI: false,
+            zoomControl: true,
+            mapTypeControl: false,
+            scaleControl: true,
+            streetViewControl: false,
+            rotateControl: false,
+            fullscreenControl: true
+        });
+
+        googleMapInstanceRef.current = map;
+
+        // Click event on map to select/move location
+        map.addListener('click', (e) => {
+            const clickedLatLng = {
+                lat: e.latLng.lat(),
+                lng: e.latLng.lng()
+            };
+            handleSetPosition(clickedLatLng);
+        });
+
+        return () => {
+            if (window.google && window.google.maps && map) {
+                window.google.maps.event.clearInstanceListeners(map);
+            }
+        };
+    }, [loaded]);
+
+    // Handle updates to 'center' prop (pan map to center)
+    useEffect(() => {
+        if (googleMapInstanceRef.current && center) {
+            let targetCenter;
+            if (typeof center[0] === 'number') {
+                targetCenter = { lat: center[0], lng: center[1] };
+            } else if (typeof center.lat === 'number') {
+                targetCenter = center;
+            }
+            if (targetCenter) {
+                googleMapInstanceRef.current.panTo(targetCenter);
+            }
+        }
+    }, [center]);
+
+    // Synchronize selected position with selector marker
+    useEffect(() => {
+        if (!loaded || !googleMapInstanceRef.current) return;
+
+        const map = googleMapInstanceRef.current;
+
+        if (selectedPos) {
+            let posObj;
+            if (typeof selectedPos.lat === 'number') {
+                posObj = selectedPos;
+            } else if (typeof selectedPos[0] === 'number') {
+                posObj = { lat: selectedPos[0], lng: selectedPos[1] };
+            }
+
+            if (posObj) {
+                if (markerInstanceRef.current) {
+                    markerInstanceRef.current.setPosition(posObj);
+                } else {
+                    const marker = new window.google.maps.Marker({
+                        position: posObj,
+                        map: map,
+                        draggable: true,
+                        title: 'Selected Location',
+                        animation: window.google.maps.Animation.DROP
+                    });
+
+                    // Drag end event for marker
+                    marker.addListener('dragend', () => {
+                        const pos = marker.getPosition();
+                        const newPos = {
+                            lat: pos.lat(),
+                            lng: pos.lng()
+                        };
+                        handleSetPosition(newPos);
+                    });
+
+                    markerInstanceRef.current = marker;
+                }
+            }
+        } else {
+            if (markerInstanceRef.current) {
+                markerInstanceRef.current.setMap(null);
+                markerInstanceRef.current = null;
+            }
+        }
+    }, [loaded, selectedPos]);
+
+    // Update state from initialPosition prop
+    useEffect(() => {
         if (initialPosition) {
-            setPosition(initialPosition);
+            setSelectedPos(initialPosition);
         }
     }, [initialPosition]);
 
     const handleSetPosition = (latlng) => {
-        setPosition(latlng);
+        setSelectedPos(latlng);
         if (onLocationSelect) {
             onLocationSelect(latlng);
         }
     };
 
-    // Handle map clicks to set position
-    const LocationClick = () => {
-        useMapEvents({
-            click(e) {
-                handleSetPosition(e.latlng);
-            },
+    // Render CCTV markers (mockCameras)
+    useEffect(() => {
+        if (!loaded || !googleMapInstanceRef.current) return;
+
+        // Clear old camera markers
+        cameraMarkersRef.current.forEach(m => m.setMap(null));
+        cameraMarkersRef.current = [];
+
+        const map = googleMapInstanceRef.current;
+
+        mockCameras.forEach(cam => {
+            // Create a custom red icon or standard marker
+            const marker = new window.google.maps.Marker({
+                position: { lat: cam.lat, lng: cam.lng },
+                map: map,
+                title: cam.name,
+                icon: {
+                    url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
+                    scaledSize: new window.google.maps.Size(32, 32)
+                }
+            });
+
+            // Info window for camera popup
+            const infoWindow = new window.google.maps.InfoWindow({
+                content: `<div style="color: #0f172a; padding: 4px; font-weight: 600; font-family: sans-serif; font-size: 13px;">${cam.name} (CCTV)</div>`
+            });
+
+            marker.addListener('click', () => {
+                infoWindow.open(map, marker);
+            });
+
+            cameraMarkersRef.current.push(marker);
         });
-        return null;
-    };
+    }, [loaded, mockCameras]);
+
+    if (error) {
+        return (
+            <div style={{ height: '400px', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--bg-card)', color: 'var(--red)', border: '1px solid var(--border)', borderRadius: '8px' }}>
+                Error loading Google Maps.
+            </div>
+        );
+    }
 
     return (
-        <div style={{ height: '400px', width: '100%', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border-color)', position: 'relative' }}>
-            <MapContainer
-                center={mapCenter}
-                zoom={13}
-                style={{ height: '100%', width: '100%' }}
-            >
-                <TileLayer
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                />
-
-                <MapUpdater center={center} />
-                <LocationClick />
-                <DraggableMarker setPosition={handleSetPosition} position={position} />
-
-                <MarkerClusterGroup>
-                    {mockCameras.map((cam) => (
-                        <Marker
-                            key={cam.id}
-                            position={[cam.lat, cam.lng]}
-                            icon={new L.Icon({
-                                iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
-                                shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-                                iconSize: [25, 41],
-                                iconAnchor: [12, 41],
-                                popupAnchor: [1, -34],
-                                shadowSize: [41, 41]
-                            })}
-                        >
-                            <Popup>{cam.name} (CCTV)</Popup>
-                        </Marker>
-                    ))}
-                </MarkerClusterGroup>
-            </MapContainer>
+        <div style={{ height: '400px', width: '100%', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border)', position: 'relative' }}>
+            {!loaded && (
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--bg-card)', zIndex: 10 }}>
+                    <span style={{ color: 'var(--text-secondary)', fontFamily: 'var(--font-sans)', fontSize: '14px' }}>Loading Map...</span>
+                </div>
+            )}
+            <div ref={mapRef} style={{ height: '100%', width: '100%' }} />
         </div>
     );
 };

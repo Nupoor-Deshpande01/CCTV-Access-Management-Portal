@@ -245,9 +245,33 @@ const Landing = () => {
                                     </div>
                                 </div>
                                 <div className="mockup-grid">
-                                    <div className="m-thumb"></div>
-                                    <div className="m-thumb"></div>
-                                    <div className="m-thumb"></div>
+                                    <div className="m-thumb">
+                                        <div className="m-thumb-overlay">
+                                            <span className="m-thumb-status"><span className="red-dot"></span>REC</span>
+                                            <span className="m-thumb-title">Main Gate - Cam 01</span>
+                                        </div>
+                                        <div className="m-thumb-icon">
+                                            <Camera size={16} />
+                                        </div>
+                                    </div>
+                                    <div className="m-thumb">
+                                        <div className="m-thumb-overlay">
+                                            <span className="m-thumb-status"><span className="red-dot"></span>REC</span>
+                                            <span className="m-thumb-title">Driveway - Cam 02</span>
+                                        </div>
+                                        <div className="m-thumb-icon">
+                                            <Camera size={16} />
+                                        </div>
+                                    </div>
+                                    <div className="m-thumb">
+                                        <div className="m-thumb-overlay">
+                                            <span className="m-thumb-status"><span className="red-dot"></span>REC</span>
+                                            <span className="m-thumb-title">Backyard - Cam 03</span>
+                                        </div>
+                                        <div className="m-thumb-icon">
+                                            <Camera size={16} />
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
