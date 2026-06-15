@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import Navbar from '../components/layout/Navbar';
 import './Landing.css';
-import { Shield, Users, Camera, Lock, Eye, ShieldCheck, FileText, CheckCircle, Search, Home } from 'lucide-react';
+import { Shield, Users, Camera, Lock, Eye, ShieldCheck, FileText, CheckCircle, Search, Home, MapPin, Zap, Server, Globe, Clock } from 'lucide-react';
 
 const Landing = () => {
     return (
@@ -11,121 +11,71 @@ const Landing = () => {
             
             {/* Hero Section */}
             <section className="hero-section">
-                <div className="container hero-grid-wrapper">
-                    {/* Left Column: Copy & Call to Action */}
-                    <div className="hero-left">
-                        <div className="trust-badge">
-                            <Shield size={13} color="var(--accent)" strokeWidth={2.5} />
-                            <span>CIVIC SAFETY NETWORK</span>
-                        </div>
-                        <h1 className="hero-title">
-                            Secure, Ethical CCTV Access for <span>Safer Communities</span>
-                        </h1>
-                        <p className="hero-subtitle">
-                            A privacy-first civic platform that empowers citizens to request surveillance footage for legitimate safety concerns, while giving camera owners full transparency, privacy control, and incentives.
-                        </p>
-                        <div className="hero-actions">
-                            <Link to="/register">
-                                <button className="btn-primary">Get Started</button>
-                            </Link>
-                            <Link to="/login">
-                                <button className="btn-outline">Log In</button>
-                            </Link>
-                        </div>
+                {/* Faint camera watermark icons for background decoration */}
+                <div className="hero-watermark wm-1"><Camera size={120} strokeWidth={0.5} /></div>
+                <div className="hero-watermark wm-2"><Camera size={100} strokeWidth={0.5} /></div>
+                <div className="hero-watermark wm-3"><Camera size={90} strokeWidth={0.5} /></div>
+                <div className="hero-watermark wm-4"><Camera size={110} strokeWidth={0.5} /></div>
+
+                <div className="container hero-centered-wrapper">
+                    <div className="hero-trust-badge">
+                        <Shield size={14} color="var(--accent)" strokeWidth={2} />
+                        <span>Trusted by Smart Cities & Law Enforcement</span>
                     </div>
 
-                    {/* Right Column: Platform Vector Mockup */}
-                    <div className="hero-right">
-                        <div className="hero-mockup-container">
-                            <div className="hero-mockup-window">
-                                <div className="mockup-window-header">
-                                    <div className="mockup-window-dots">
-                                        <div className="mockup-window-dot red"></div>
-                                        <div className="mockup-window-dot yellow"></div>
-                                        <div className="mockup-window-dot green"></div>
-                                    </div>
-                                    <div className="mockup-window-address">
-                                        portal.cctvaccess.gov.in
-                                    </div>
-                                </div>
-                                <div className="mockup-window-body">
-                                    {/* Left: Map Preview */}
-                                    <div className="mockup-map-container">
-                                        <div className="mockup-map-grid"></div>
-                                        <div className="mockup-map-streets">
-                                            <div className="mockup-map-street s1"></div>
-                                            <div className="mockup-map-street s2"></div>
-                                            <div className="mockup-map-street s3"></div>
-                                            <div className="mockup-map-street s4"></div>
-                                        </div>
-                                        {/* Camera Pins */}
-                                        <div className="mockup-map-pin p1">
-                                            <Camera size={10} strokeWidth={2.5} />
-                                        </div>
-                                        <div className="mockup-map-pin p2">
-                                            <Camera size={10} strokeWidth={2.5} />
-                                        </div>
-                                        <div className="mockup-map-pin p3">
-                                            <Camera size={10} strokeWidth={2.5} />
-                                        </div>
-                                    </div>
+                    <h1 className="hero-title-centered">
+                        Secure CCTV Access for a <span style={{ color: 'var(--accent)' }}>Safer</span>
+                        <br />
+                        <span style={{ color: 'var(--accent)' }}>Community</span>
+                    </h1>
 
-                                    {/* Right: Request Tracker */}
-                                    <div className="mockup-status-panel">
-                                        <div className="mockup-card-item">
-                                            <div className="mockup-card-title">Active Request</div>
-                                            <div className="mockup-card-desc">
-                                                <span>#REQ-4028</span>
-                                                <span className="mockup-badge success">Approved</span>
-                                            </div>
-                                            <div className="mockup-card-meta">Sector-4 Crossroad</div>
-                                        </div>
+                    <p className="hero-subtitle-centered">
+                        The centralized platform where CCTV owners register their cameras and citizens securely request footage. Privacy-first with AI-powered face & number plate masking.
+                    </p>
 
-                                        <div className="mockup-card-item" style={{ backgroundColor: 'transparent', border: 'none', padding: '0 4px' }}>
-                                            <div className="mockup-steps">
-                                                <div className="mockup-step-node">
-                                                    <div className="mockup-step-indicator completed"></div>
-                                                    <span className="mockup-step-text completed">Request Lodged</span>
-                                                </div>
-                                                <div className="mockup-step-node">
-                                                    <div className="mockup-step-indicator completed"></div>
-                                                    <span className="mockup-step-text completed">Owner Approved</span>
-                                                </div>
-                                                <div className="mockup-step-node">
-                                                    <div className="mockup-step-indicator active"></div>
-                                                    <span className="mockup-step-text active">Footage Ready</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
+                    <div className="hero-actions-centered">
+                        <Link to="/register?role=owner">
+                            <button className="btn-primary-centered">
+                                <Camera size={16} />
+                                Register as CCTV Owner
+                            </button>
+                        </Link>
+                        <Link to="/register?role=citizen">
+                            <button className="btn-outline-centered">
+                                <Search size={16} />
+                                Request Footage
+                            </button>
+                        </Link>
+                    </div>
+
+                    <div className="hero-stats-grid">
+                        <div className="hero-stat-card">
+                            <div className="hero-stat-icon-wrapper">
+                                <Camera size={20} color="var(--accent)" />
                             </div>
+                            <div className="hero-stat-value">2,450</div>
+                            <div className="hero-stat-label">Cameras Registered</div>
                         </div>
-                    </div>
-                </div>
-
-                {/* Stats Bar */}
-                <div className="container hero-stats-wrapper">
-                    <div className="stats-bar">
-                        <div className="stat-cell">
-                            <Users size={20} color="var(--accent)" />
-                            <div className="stat-number">10k+</div>
-                            <div className="stat-label">Active Users</div>
+                        <div className="hero-stat-card">
+                            <div className="hero-stat-icon-wrapper">
+                                <Users size={20} color="var(--accent)" />
+                            </div>
+                            <div className="hero-stat-value">12,500</div>
+                            <div className="hero-stat-label">Active Users</div>
                         </div>
-                        <div className="stat-cell">
-                            <Camera size={20} color="var(--accent)" />
-                            <div className="stat-number">5,000+</div>
-                            <div className="stat-label">Cameras</div>
+                        <div className="hero-stat-card">
+                            <div className="hero-stat-icon-wrapper">
+                                <Globe size={20} color="var(--accent)" />
+                            </div>
+                            <div className="hero-stat-value">15</div>
+                            <div className="hero-stat-label">Cities Covered</div>
                         </div>
-                        <div className="stat-cell">
-                            <ShieldCheck size={20} color="var(--accent)" />
-                            <div className="stat-number">98%</div>
-                            <div className="stat-label">Success Rate</div>
-                        </div>
-                        <div className="stat-cell" style={{ borderRight: 'none' }}>
-                            <Lock size={20} color="var(--accent)" />
-                            <div className="stat-number">100%</div>
-                            <div className="stat-label">Private</div>
+                        <div className="hero-stat-card">
+                            <div className="hero-stat-icon-wrapper">
+                                <Clock size={20} color="var(--accent)" />
+                            </div>
+                            <div className="hero-stat-value">2.5 hours</div>
+                            <div className="hero-stat-label">Avg. Response Time</div>
                         </div>
                     </div>
                 </div>
@@ -134,22 +84,68 @@ const Landing = () => {
             {/* Why Choose Section */}
             <section className="features-section">
                 <div className="container">
-                    <h2 className="section-heading">Why Choose <span style={{ color: 'var(--accent)' }}>CCTVAccess</span></h2>
+                    <div className="section-header">
+                        <h2 className="section-heading" style={{ marginBottom: '16px' }}>
+                            Why Choose CCTV<span style={{ color: 'var(--accent)' }}>Access?</span>
+                        </h2>
+                        <p className="section-subheading">
+                            Built with privacy, security, and transparency at its core. We're redefining how communities access surveillance footage.
+                        </p>
+                    </div>
                     <div className="features-grid">
                         <div className="feature-card">
-                            <div className="feature-icon-box"><Eye size={20} color="var(--accent)" /></div>
-                            <h3 className="feature-title">Transparent Requests</h3>
-                            <p className="feature-desc">Request footage with a clear reason. Owners approve or deny based on validity.</p>
+                            <div className="feature-icon-box">
+                                <MapPin size={20} />
+                            </div>
+                            <h3 className="feature-title">Location-Based Search</h3>
+                            <p className="feature-desc">
+                                Find cameras near any incident location with our interactive map. Search by address, area, or coordinates.
+                            </p>
                         </div>
                         <div className="feature-card">
-                            <div className="feature-icon-box"><Lock size={20} color="var(--accent)" /></div>
-                            <h3 className="feature-title">Privacy First</h3>
-                            <p className="feature-desc">Footage is secure. Only approved requests get temporary access links.</p>
+                            <div className="feature-icon-box">
+                                <Eye size={20} />
+                            </div>
+                            <h3 className="feature-title">AI Privacy Masking</h3>
+                            <p className="feature-desc">
+                                Automatic face and number plate detection with intelligent masking. Protect privacy while maintaining evidence integrity.
+                            </p>
                         </div>
                         <div className="feature-card">
-                            <div className="feature-icon-box"><ShieldCheck size={20} color="var(--accent)" /></div>
-                            <h3 className="feature-title">Owner Control</h3>
-                            <p className="feature-desc">CCTV owners decide who sees what. Earn reputation and incentives for helping.</p>
+                            <div className="feature-icon-box">
+                                <Lock size={20} />
+                            </div>
+                            <h3 className="feature-title">Secure Access Control</h3>
+                            <p className="feature-desc">
+                                Role-based permissions ensure only authorized personnel can approve and access sensitive footage.
+                            </p>
+                        </div>
+                        <div className="feature-card">
+                            <div className="feature-icon-box">
+                                <Zap size={20} />
+                            </div>
+                            <h3 className="feature-title">Quick Turnaround</h3>
+                            <p className="feature-desc">
+                                Average response time of 2.5 hours. Urgent requests can be prioritized for faster processing.
+                            </p>
+                        </div>
+                        <div className="feature-card">
+                            <div className="feature-icon-box">
+                                <Server size={20} />
+                            </div>
+                            <h3 className="feature-title">Enterprise Ready</h3>
+                            <p className="feature-desc">
+                                Designed for government, law enforcement, and large organizations with compliance and audit trails.
+                            </p>
+                        </div>
+                        <div className="feature-card">
+                            <div className="feature-icon-box">
+                                <Shield size={20} />
+                            </div>
+                            <h3 className="feature-title">Verified Network</h3>
+                            <p className="feature-desc">
+                                All CCTV owners are verified before registration. Trusted network of cameras across cities.
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -219,7 +215,7 @@ const Landing = () => {
                                 <span className="check-text">Approve or deny requests at your discretion</span>
                             </div>
                         </div>
-                        <Link to="/register">
+                        <Link to="/register?role=owner">
                             <button className="btn-primary" style={{ marginTop: '24px' }}>Become an Owner</button>
                         </Link>
                     </div>
