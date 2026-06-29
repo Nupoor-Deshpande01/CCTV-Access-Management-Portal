@@ -86,17 +86,19 @@ const ComplaintForm = ({ onSuccess }) => {
         try {
             setLoading(true);
 
-            // Save complaint to Firestore bypassing payment
+            // Save complaint to Firestore
             await addDoc(collection(db, "requests"), {
               type: formData.type,
               description: formData.description,
               location: formData.location,
               incidentDate: formData.startTime || null,
+              incidentEndTime: formData.endTime || null,
               citizenId: auth.currentUser.uid,
-              citizenName: auth.currentUser.displayName || "Citizen",
+              citizenName: user?.name || auth.currentUser.displayName || auth.currentUser.email,
               citizenEmail: auth.currentUser.email,
+              targetEmail: formData.targetEmail?.trim() || null,   // ← owner routing
               status: "pending",
-              paymentStatus: "skipped", // Or remove entirely
+              paymentStatus: "skipped",
               createdAt: serverTimestamp(),
               footageUrl: null,
               approvedAt: null,

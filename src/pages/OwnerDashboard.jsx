@@ -5,7 +5,7 @@ import Button from '../components/common/Button';
 import Input from '../components/common/Input';
 import { db } from '../firebase';
 import { collection, query, where, onSnapshot, doc, updateDoc, orderBy, or } from 'firebase/firestore';
-import { Check, X, Plus, Video } from 'lucide-react';
+import { X, Plus, Video } from 'lucide-react';
 import toast from 'react-hot-toast';
 import CameraForm from '../components/CameraForm';
 import { useAuth } from '../context/AuthContext';
@@ -51,7 +51,14 @@ const OwnerDashboard = () => {
                 ...doc.data()
             }))
             .filter(req => req.status === 'pending')
-            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+            .sort((a, b) => {
+                const toDate = (ts) => {
+                    if (!ts) return new Date(0);
+                    if (ts.toDate) return ts.toDate();
+                    return new Date(ts);
+                };
+                return toDate(b.createdAt) - toDate(a.createdAt);
+            });
             
             setRequests(reqs);
             setLoading(false);
@@ -165,26 +172,44 @@ const OwnerDashboard = () => {
                                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', alignItems: 'center' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                 <StatusBadge status={req.status} />
-                                                <strong>{req.type}: {req.description}</strong>
+                                                <strong>{req.type}</strong>
                                             </div>
                                             <span className="text-muted" style={{ fontSize: '0.8rem' }}>
-                                                {req.createdAt ? new Date(req.createdAt).toLocaleDateString() : 'Date N/A'}
+                                                {(() => {
+                                                    const ts = req.createdAt;
+                                                    const d = ts?.toDate ? ts.toDate() : ts ? new Date(ts) : null;
+                                                    return d ? d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : 'Just now';
+                                                })()}
                                             </span>
                                         </div>
-                                        {req.userName && <p className="text-muted" style={{ fontSize: '0.8rem', marginBottom: '0.5rem' }}>Requested by: {req.userName}</p>}
+
+                                        {/* Description */}
+                                        <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '0 0 6px 0' }}>{req.description}</p>
+
+                                        {/* Citizen info */}
+                                        <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '6px', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                                            {req.citizenName && <span>👤 {req.citizenName}</span>}
+                                            {req.citizenEmail && <span>✉️ {req.citizenEmail}</span>}
+                                        </div>
+
+                                        {/* Location */}
                                         {req.location && (
-                                            <p className="text-muted" style={{ fontSize: '0.8rem', marginBottom: '0.5rem' }}>
-                                                Location: {req.location.lat.toFixed(4)}, {req.location.lng.toFixed(4)}
+                                            <p className="text-muted" style={{ fontSize: '0.78rem', marginBottom: '6px' }}>
+                                                📍 {req.location.displayName || `${req.location.lat?.toFixed(4)}, ${req.location.lng?.toFixed(4)}`}
                                             </p>
                                         )}
-                                        {req.amount && (
-                                            <p style={{ fontSize: '0.8rem', marginBottom: '0.5rem', color: 'var(--green)' }}>
-                                                Amount Paid: ₹{req.amount / 100}
+
+                                        {/* Incident time */}
+                                        {req.incidentDate && (
+                                            <p className="text-muted" style={{ fontSize: '0.78rem', marginBottom: '6px' }}>
+                                                🕒 Incident: {new Date(req.incidentDate).toLocaleString()}
+                                                {req.incidentEndTime && ` → ${new Date(req.incidentEndTime).toLocaleString()}`}
                                             </p>
                                         )}
-                                        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+
+                                        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
                                             <Button size="sm" onClick={() => handleApproveClick(req.id)} style={{ gap: '4px' }}>
-                                                <Check size={16} /> Approve
+                                                <Video size={14} /> Upload & Approve
                                             </Button>
                                             <Button size="sm" variant="danger" onClick={() => handleReject(req.id)} style={{ gap: '4px' }}>
                                                 <X size={16} /> Reject
@@ -198,25 +223,38 @@ const OwnerDashboard = () => {
                         {approveModalOpen && (
                             <div style={{
                                 position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                                backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000
+                                backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000
                             }}>
-                                <Card title="Provide Footage Link" style={{ width: '400px', margin: '20px' }}>
-                                    <p className="u-mb-3 text-muted">Since Firebase Storage is unavailable on your Free plan, please paste an external direct link to the MP4 footage (e.g., from Imgur, Cloudinary, AWS S3, or raw GitHub link).</p>
+                                <Card title="📹 Upload CCTV Footage" style={{ width: '460px', margin: '20px' }}>
+                                    <p className="u-mb-3 text-muted" style={{ fontSize: '0.875rem', lineHeight: '1.5' }}>
+                                        Paste a direct link to the relevant CCTV footage video.
+                                        You can host the video on <strong>Google Drive</strong>, <strong>Cloudinary</strong>, <strong>Dropbox</strong>, or any direct MP4 URL.
+                                    </p>
+
+                                    <div style={{ background: 'var(--bg-secondary)', borderRadius: '8px', padding: '12px', marginBottom: '16px', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                                        <strong style={{ color: 'var(--text-primary)' }}>💡 How to get a shareable link:</strong>
+                                        <ul style={{ margin: '6px 0 0 0', paddingLeft: '18px', lineHeight: '1.8' }}>
+                                            <li><strong>Google Drive:</strong> Right-click file → Share → Copy link</li>
+                                            <li><strong>Dropbox:</strong> Click Share → Create link</li>
+                                            <li><strong>Direct MP4:</strong> Paste any .mp4 URL directly</li>
+                                        </ul>
+                                    </div>
+
                                     <div className="input-group u-mb-3">
                                         <Input
-                                            label="External Video URL"
-                                            placeholder="https://example.com/video.mp4" 
-                                            value={externalLink} 
-                                            onChange={(e) => setExternalLink(e.target.value)} 
+                                            label="Video / Footage URL"
+                                            placeholder="https://drive.google.com/... or https://example.com/footage.mp4"
+                                            value={externalLink}
+                                            onChange={(e) => setExternalLink(e.target.value)}
                                         />
                                     </div>
                                     <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '16px' }}>
                                         <Button variant="secondary" onClick={() => { setApproveModalOpen(false); setExternalLink(''); }} disabled={submitting}>Cancel</Button>
-                                        <Button 
-                                            onClick={() => handleLinkSubmit(selectedRequestId)} 
+                                        <Button
+                                            onClick={() => handleLinkSubmit(selectedRequestId)}
                                             disabled={!externalLink || submitting}
                                         >
-                                            {submitting ? `Approving...` : 'Approve Request'}
+                                            {submitting ? 'Approving...' : '✓ Approve & Send Footage'}
                                         </Button>
                                     </div>
                                 </Card>
