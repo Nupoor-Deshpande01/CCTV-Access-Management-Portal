@@ -23,7 +23,7 @@ const UserDashboard = () => {
 
         const q = query(
             collection(db, 'requests'),
-            where('userId', '==', user.uid)
+            where('citizenId', '==', user.uid)
         );
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -46,7 +46,12 @@ const UserDashboard = () => {
             prevRequestsRef.current = reqs;
 
             // Sort locally to bypass Firestore composite index requirement
-            reqs.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+            const toDate = (ts) => {
+                if (!ts) return new Date(0);
+                if (ts.toDate) return ts.toDate();         // Firestore Timestamp
+                return new Date(ts);                       // ISO string fallback
+            };
+            reqs.sort((a, b) => toDate(b.createdAt) - toDate(a.createdAt));
             setRequests(reqs);
             setLoading(false);
         }, (error) => {
@@ -101,7 +106,11 @@ const UserDashboard = () => {
                                             </div>
                                             
                                             <div style={{ fontSize: '0.75rem', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '8px' }}>
-                                                <Clock size={12} /> {req.createdAt ? new Date(req.createdAt).toLocaleDateString() + ' ' + new Date(req.createdAt).toLocaleTimeString() : 'Just now'}
+                                                <Clock size={12} /> {(() => {
+                                                        const ts = req.createdAt;
+                                                        const d = ts?.toDate ? ts.toDate() : ts ? new Date(ts) : null;
+                                                        return d ? d.toLocaleDateString() + ' ' + d.toLocaleTimeString() : 'Just now';
+                                                    })()}
                                             </div>
                                             <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: expandedRequests[req.id] ? '8px' : '0' }}>{req.description}</p>
     
